@@ -1,0 +1,8 @@
+Flask
+gunicorn
+requests
+pandas
+pandas-ta
+yfinance
+mplfinance
+Pillow
