@@ -13,15 +13,33 @@ from charting import generate_annotated_chart, generate_datasheet_image, create_
 app = Flask(__name__)
 
 
+# In bot_app.py
+
 def get_market_data(ticker: str) -> pd.DataFrame | None:
     """Fetches historical market data for a given ticker from Yahoo Finance."""
     try:
-        data = yf.download(f"{ticker}.NS", period="6mo", progress=False, timeout=10)
-        if data.empty or len(data) < 51: return None
-        data.columns = [col.lower() for col in data.columns]
-        return data
+        # Download data for a single ticker.
+        # We add auto_adjust=True to use the modern default and suppress the warning.
+        data = yf.download(
+            tickers=f"{ticker}.NS",
+            period="6mo",
+            progress=False,
+            timeout=10,
+            auto_adjust=True
+        )
+
+        # Check if the returned data is a valid DataFrame
+        if isinstance(data, pd.DataFrame) and not data.empty:
+            if len(data) < 51: return None # Ensure enough data for 50-day EMA
+            # Yahoo Finance columns are capitalized. We lowercase them for consistency.
+            data.columns = [col.lower() for col in data.columns]
+            return data
+        else:
+            # yfinance did not return a valid DataFrame for this ticker
+            return None
+
     except Exception as e:
-        print(f"Error fetching market data for {ticker}: {e}")
+        print(f"An error occurred while fetching data for {ticker}: {e}")
         return None
 
 
