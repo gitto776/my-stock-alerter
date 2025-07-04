@@ -15,32 +15,36 @@ app = Flask(__name__)
 
 # In bot_app.py
 
-def get_market_data(ticker: str) -> pd.DataFrame | None:
-    """Fetches historical market data for a given ticker from Yahoo Finance."""
-    try:
-        # Download data for a single ticker.
-        # We add auto_adjust=True to use the modern default and suppress the warning.
-        data = yf.download(
-            tickers=f"{ticker}.NS",
-            period="6mo",
-            progress=False,
-            timeout=10,
-            auto_adjust=True
-        )
+# In bot_app.py
 
-        # Check if the returned data is a valid DataFrame
-        if isinstance(data, pd.DataFrame) and not data.empty:
-            if len(data) < 51: return None # Ensure enough data for 50-day EMA
-            # Yahoo Finance columns are capitalized. We lowercase them for consistency.
-            data.columns = [col.lower() for col in data.columns]
-            return data
-        else:
-            # yfinance did not return a valid DataFrame for this ticker
+def get_market_data(ticker: str) -> pd.DataFrame | None:
+    """
+    Fetches and validates historical market data for a given ticker from Yahoo Finance.
+    """
+    # yfinance can sometimes print its own errors; we will handle the return value.
+    data = yf.download(
+        tickers=f"{ticker}.NS",
+        period="6mo",
+        progress=False,
+        timeout=10,
+        auto_adjust=True
+    )
+
+    # This is the most important check:
+    # Only proceed if the returned object is a non-empty pandas DataFrame.
+    if isinstance(data, pd.DataFrame) and not data.empty:
+        # Check for sufficient data length after confirming it's a DataFrame
+        if len(data) < 51:
+            print(f"Not enough historical data for {ticker}.")
             return None
 
-    except Exception as e:
-        print(f"An error occurred while fetching data for {ticker}: {e}")
-        return None
+        # Now it's safe to access .columns
+        data.columns = [col.lower() for col in data.columns]
+        return data
+
+    # If yfinance returns anything else (a tuple, None, empty DataFrame), fail safely.
+    print(f"Could not retrieve valid DataFrame for {ticker}.")
+    return None
 
 
 def run_scan_and_report_to_n8n():
